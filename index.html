@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>itz_omar</title>
+
+    <!-- Scoped styles for the poll & comments widget + admin (namespaced under .poll-wrap) -->
+    <style>
+      /* Poll widget styles (RTL Arabic) */
+      .poll-wrap { max-width: 900px; margin: 24px auto; direction: rtl; font-family: "Segoe UI", Tahoma, Arial, sans-serif; color:#111; }
+      .poll-wrap .card { background:#fff; border-radius:10px; padding:18px; box-shadow:0 4px 12px rgba(15,23,42,0.06); margin-bottom:18px; }
+      .poll-wrap h2 { margin:0 0 8px 0; font-size:20px; }
+      .poll-options{display:flex; flex-direction:column; gap:10px; margin-top:12px;}
+      .poll-option{display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; border:1px solid #e6e9ef;}
+      .poll-option input[type="radio"]{width:18px; height:18px;}
+      .poll-option .label{flex:1;}
+      .poll-vote-btn{background:#0b79d0; color:white; border:none; padding:10px 14px; border-radius:8px; cursor:pointer;}
+      .poll-vote-btn:disabled{opacity:0.6; cursor:not-allowed;}
+      .poll-results{margin-top:12px;}
+      .poll-bar{height:12px; background:#e6e9ef; border-radius:999px; overflow:hidden; margin-top:6px;}
+      .poll-bar > i{display:block; height:100%; background:linear-gradient(90deg,#0b79d0,#3aa0ff);}
+      .poll-meta{font-size:13px; color:#6b7280; margin-top:6px;}
+
+      /* comments */
+      .poll-comments .comment-form{display:flex; gap:10px; flex-direction:column;}
+      .poll-comments textarea{min-height:80px; resize:vertical; padding:10px; border-radius:8px; border:1px solid #e6e9ef; font-size:14px;}
+      .poll-comments input[type="text"]{padding:10px; border-radius:8px; border:1px solid #e6e9ef;}
+      .poll-comment-actions{display:flex; gap:8px; justify-content:flex-start; align-items:center; margin-top:6px;}
+      .btn-secondary{background:#eef3fb; border:1px solid #e0e7ff; padding:8px 10px; border-radius:8px; cursor:pointer;}
+      .poll-comments-list{margin-top:14px; display:flex; flex-direction:column; gap:12px;}
+      .poll-comment{display:flex; gap:10px; align-items:flex-start;}
+      .poll-avatar{width:44px;height:44px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-weight:700;color:#024;flex-shrink:0;}
+      .poll-comment-body{flex:1;background:#fbfdff;padding:10px;border-radius:8px;border:1px solid #eef2ff;}
+      .poll-comment-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+      .poll-comment-author{font-weight:700;}
+      .poll-comment-text{margin-top:6px; white-space:pre-wrap; }
+      .poll-comment-controls{margin-top:8px; display:flex; gap:8px; align-items:center; font-size:13px; color:#6b7280;}
+      .link-btn{background:transparent;border:none;color:#6b7280;cursor:pointer;padding:4px 6px;border-radius:6px;}
+      .poll-reply{margin-right:54px; margin-top:8px; display:flex; flex-direction:column; gap:8px;}
+      .small{font-size:13px;color:#6b7280;}
+      .inline-edit{width:100%; padding:8px; border-radius:6px; border:1px solid #dee2e8;}
+      @media (max-width:600px){ .poll-option{padding:10px} .poll-avatar{width:40px;height:40px} }
+
+      /* Admin panel styles */
+      .admin-floating {
+        position: fixed;
+        left: 16px;
+        bottom: 16px;
+        background:#111;
+        color:white;
+        padding:8px 12px;
+        border-radius:8px;
+        cursor:pointer;
+        z-index:1000;
+        font-weight:700;
+      }
+      .admin-panel {
+        position: fixed;
+        left: 20px;
+        top: 20px;
+        width: 420px;
+        max-height: 85vh;
+        overflow:auto;
+        background: #fff;
+        box-shadow: 0 8px 30px rgba(2,6,23,0.2);
+        border-radius:10px;
+        padding:14px;
+        z-index:1000;
+        display:none;
+        direction: ltr;
+        font-family: Arial, sans-serif;
+      }
+      .admin-panel h3{margin:6px 0 8px 0}
+      .admin-row{display:flex; gap:8px; align-items:center; margin-bottom:8px;}
+      .admin-row input[type="text"], .admin-row input[type="number"], .admin-row textarea { flex:1; padding:8px; border:1px solid #e6e9ef; border-radius:6px; }
+      .admin-section{border-top:1px dashed #eef2ff; padding-top:8px; margin-top:8px;}
+      .admin-comment{border:1px solid #f1f5f9; padding:8px; border-radius:6px; margin-bottom:6px; background:#fbfdff}
+      .muted { color:#6b7280; font-size:13px; }
+      /* login modal */
+      .admin-modal {
+        position: fixed;
+        left: 0; top:0; right:0; bottom:0;
+        display:flex; align-items:center; justify-content:center;
+        background: rgba(0,0,0,0.45);
+        z-index:1100;
+        display:none;
+      }
+      .admin-modal .box {
+        width: 360px; background: #fff; padding:16px; border-radius:8px;
+      }
+      .danger { color:#ef4444; }
+    </style>
+  </head>
+  <body>
+    <div class="container"></div>
+    <header>
+      <img src="C:\Users\King\Downloads\assets\assets\svg\phone.svg" alt="MusaabK99 logo" />
+      <nav class="navigation">
+        <ul>
+          <li><a href="#aboutMe">About Me</a></li>
+          <li><a href="#MyWorks">My Works</a></li>
+          <li><a href="#contactMe">Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+    <hr />
+
+    <section class="hero">
+      <img class="arrow" src="C:Users\King\Downloads\assets\assets\svg\arrow.svg" alt="arrow" />
+      <div class="herosup">
+        <h1 class="name">I’m Omar</h1>
+        <h1 class="title">trust dealar</h1>
+        <div class="heroBtns">
+          <a class="hireMe" href="#contactMe">Hire me</a>
+        </div>
+      </div>
+      <img src="c:Users\King\Downloads\assets\assets\svg\hero.svg" alt="hero image" class="heroImg" />
+    </section>
+
+    <section class="aboutMe" id="aboutMe">
+      <img src="C:\Users\King\Downloads\assets\assets\svg\AboutMe.svg"
+        alt="aboutMe image"
+        class="aboutMeImg"
+      />
+      <div class="textContainer">
+        <div class="textTitle">
+          <h1 class="aboutName">About</h1>
+          <h1 class="aboutTitle">me</h1>
+          <img src="C:\Users\King\Downloads\assets\assets\svg\lightbulb.svg" alt="ligh" class="light" />
+        </div>
+        <p class="aboutMePar">
+          The most trust dealar in roblox and i'm have a best brice to robux and brantots 
+        </p>
+      </div>
+    </section>
+
+    <section class="works" id="MyWorks">
+      <div class="worksContainer">
+        <div class="projectTitle">
+          <h1 class="aboutName">My recent</h1>
+          <h1 class="aboutTitle">works</h1>
+        </div>
+        <ul>
+          <li>
+            <a href=""><img src="C:\Users\King\Downloads\assets\assets\imgs\landingpage.png" alt="landing Page" /></a>
+          </li>
+          <li>
+            <a href=""><img src="C:\Users\King\Downloads\assets\assets\imgs\webApp.png" alt="Wep App" /></a>
+          </li>
+          <li>
+            <a href=""><img src="C:\Users\King\Downloads\assets\assets\imgs\App.png" alt="App" /></a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== Poll & Comments widget (Arabic, RTL) inserted here ===== -->
+    <section id="pollSection" class="poll-wrap" aria-label="استطلاع رأي وتعليقات">
+      <div class="card poll-card" lang="ar" dir="rtl">
+        <h2 id="pollQuestion">ما رأيك في واجهة الموقع الجديدة؟</h2>
+        <div class="poll-meta">شارك رأيك — النتائج تظهر فورًا</div>
+
+        <form id="pollForm" class="poll-options" aria-label="خيارات الاستطلاع">
+          <!-- options built dynamically -->
+        </form>
+
+        <div style="margin-top:12px;">
+          <button id="voteBtn" class="poll-vote-btn">صوّت</button>
+          <span style="margin-inline-start:12px" class="small">المصوتون: <strong id="totalVotes">0</strong></span>
+        </div>
+
+        <div class="poll-results" id="resultsArea" aria-live="polite"></div>
+      </div>
+
+      <div class="card poll-card poll-comments" lang="ar" dir="rtl">
+        <h2>التعليقات</h2>
+        <div class="muted">اكتب تعليقك أو رد على تعليقات الآخرين</div>
+
+        <div class="comment-form" id="commentForm" style="margin-top:12px;">
+          <input type="text" id="username" placeholder="اسمك (اختياري)" />
+          <textarea id="commentText" placeholder="اكتب تعليقك هنا... (حتى 500 حرف)"></textarea>
+          <div class="poll-comment-actions">
+            <button id="addCommentBtn" class="poll-vote-btn">أضف تعليق</button>
+            <button id="clearFormBtn" class="btn-secondary">مسح</button>
+            <div style="margin-inline-start:auto" class="small">التعليقات: <span id="commentsCount">0</span></div>
+          </div>
+        </div>
+
+        <div class="poll-comments-list" id="commentsList" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <!-- ===== Admin floating button & panel ===== -->
+    <div class="admin-floating" id="adminOpenBtn">Admin</div>
+
+    <div class="admin-modal" id="adminModal">
+      <div class="box">
+        <h3 id="modalTitle">دخول لوحة الإدارة</h3>
+        <div style="margin-bottom:8px;" class="muted" id="modalHint">أدخل كلمة المرور الخاصة بالمالك</div>
+        <input type="password" id="adminPassword" placeholder="كلمة المرور" style="width:100%; padding:8px; border-radius:6px; border:1px solid #e6e9ef;"/>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="adminLoginBtn" class="poll-vote-btn">دخول</button>
+          <button id="adminCancelBtn" class="btn-secondary">إلغاء</button>
+        </div>
+        <div style="margin-top:10px;" class="muted">ملاحظة: إذا لم تُحدد كلمة مرور من قبل، سيتم إنشاءها عند أول دخول.</div>
+      </div>
+    </div>
+
+    <div class="admin-panel" id="adminPanel" aria-hidden="true" role="dialog" aria-label="لوحة إدارة">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>لوحة الإدارة (Owner)</h3>
+        <div>
+          <button id="adminCloseBtn" class="btn-secondary">إغلاق</button>
+        </div>
+      </div>
+
+      <!-- Poll edit -->
+      <div class="admin-section">
+        <h4>تحرير الاستطلاع</h4>
+        <div class="admin-row">
+          <input type="text" id="adminPollQuestion" placeholder="سؤال الاستطلاع" />
+        </div>
+        <div id="adminOptionsList"></div>
+        <div class="admin-row">
+          <input type="text" id="adminNewOption" placeholder="نص خيار جديد" />
+          <button id="adminAddOption" class="poll-vote-btn">أضف خيار</button>
+        </div>
+        <div class="admin-row">
+          <button id="adminSavePoll" class="poll-vote-btn">حفظ التعديلات</button>
+          <button id="adminResetVotes" class="btn-secondary">إعادة ضبط الأصوات</button>
+          <label style="display:flex;align-items:center; gap:6px; margin-left:auto;">
+            <input type="checkbox" id="adminLockVoting" /> قفل التصويت
+          </label>
+        </div>
+      </div>
+
+      <!-- Comments moderation -->
+      <div class="admin-section">
+        <h4>إدارة التعليقات</h4>
+        <div class="admin-row">
+          <button id="adminRefreshComments" class="poll-vote-btn">تحديث القائمة</button>
+          <button id="adminDeleteAllComments" class="btn-secondary danger">حذف كل التعليقات</button>
+        </div>
+        <div id="adminCommentsList" style="margin-top:8px;"></div>
+      </div>
+
+      <!-- Data export/import -->
+      <div class="admin-section">
+        <h4>تصدير / استيراد البيانات</h4>
+        <div class="admin-row">
+          <button id="adminExportBtn" class="poll-vote-btn">تصدير JSON</button>
+          <button id="adminImportBtn" class="btn-secondary">استيراد من JSON</button>
+        </div>
+        <textarea id="adminImportArea" placeholder="أدخل JSON هنا للاستيراد (بدلاً من زر الاستيراد يمكنك لصق هنا ثم الضغط 'تنفيذ الاستيراد')" style="width:100%; min-height:80px; margin-top:8px; display:none;"></textarea>
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <button id="adminDoImport" class="poll-vote-btn" style="display:none;">تنفيذ الاستيراد</button>
+          <button id="adminClearImported" class="btn-secondary" style="display:none;">إلغاء الاستيراد</button>
+        </div>
+      </div>
+
+      <!-- Danger actions -->
+      <div class="admin-section">
+        <h4 class="danger">إجراءات خطيرة</h4>
+        <div class="admin-row">
+          <button id="adminResetAll" class="btn-secondary danger">إعادة ضبط كامل (استطلاع + تعليقات)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== End admin ===== -->
+
+    <section class="contactContainer" id="contactMe">
+      <div class="contactTitle">
+        <h1 class="aboutName">Contact</h1>
+        <h1 class="aboutTitle">me</h1>
+      </div>
+      <div class="contact">
+        <div class="emailAndPhone">
+          <a href="mailto:moazxu6368@gmail.com"><h3>aljnmr706@gmail.com</h3></a>
+        </div>
+        <div class="emailAndPhone">
+          <h3>+20 1287754157</h3>
+        </div>
+      </div>
+      <div class="facebook" style="margin-top:12px;">
+        <h3>https://www.facebook.com/share/1E9Q5FtKuG/</h3>
+      </div>
+    </section>
+    <hr />
+    <footer>
+      <p>Omar</p>
+      <p>good luck</p>
+    </footer>
+
+    <!-- Poll & comments script (uses localStorage) + Admin logic -->
+    <script>
+      // Scoped storage keys
+      const POLL_STORAGE_KEY = 'itzomar_poll_v1';
+      const COMMENTS_STORAGE_KEY = 'itzomar_poll_comments_v1';
+      const ADMIN_HASH_KEY = 'itzomar_admin_hash_v1';
+
+      // Default poll data
+      const defaultPoll = {
+        id: 'poll-1',
+        question: 'ما رأيك في واجهة الموقع الجديدة؟',
+        options: [
+          { id: 'o1', label: 'رائعة 👌', votes: 40 },
+          { id: 'o2', label: 'جيدة 🙂', votes: 3 },
+          { id: 'o3', label: 'تحتاج تحسين 👎', votes: 0 },
+          { id: 'o4', label: 'محايد 🤷', votes: 2 }
+        ],
+        locked: false
+      };
+
+      // helpers
+      const byId = id => document.getElementById(id);
+      function savePoll(poll){ localStorage.setItem(POLL_STORAGE_KEY, JSON.stringify(poll)); }
+      function loadPoll(){ return JSON.parse(localStorage.getItem(POLL_STORAGE_KEY) || 'null') || defaultPoll; }
+      function saveComments(list){ localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(list)); }
+      function loadComments(){ return JSON.parse(localStorage.getItem(COMMENTS_STORAGE_KEY) || '[]'); }
+      function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+      function timeAgo(ts){
+        const diff = Math.floor((Date.now() - ts)/1000);
+        if(diff < 10) return 'الآن';
+        if(diff < 60) return `${diff} ثانية`;
+        if(diff < 3600) return `${Math.floor(diff/60)} دقيقة`;
+        if(diff < 86400) return `${Math.floor(diff/3600)} ساعة`;
+        return `${Math.floor(diff/86400)} يوم`;
+      }
+      function initials(name){
+        if(!name) return 'مستخدم';
+        return name.trim().split(/\s+/).slice(0,2).map(n=>n[0]).join('').toUpperCase();
+      }
+      function escapeHtml(s){
+        if(!s) return '';
+        return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+      }
+
+      // Admin auth helpers (SHA-256)
+      async function sha256hex(str){
+        const enc = new TextEncoder().encode(str);
+        const buf = await crypto.subtle.digest('SHA-256', enc);
+        return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+      }
+
+      // Poll render & actions
+      let poll = loadPoll();
+      const pollForm = byId('pollForm');
+      const resultsArea = byId('resultsArea');
+      const totalVotesEl = byId('totalVotes');
+      const voteBtn = byId('voteBtn');
+
+      function renderPoll(){
+        byId('pollQuestion').textContent = poll.question;
+        pollForm.innerHTML = '';
+        poll.options.forEach(opt=>{
+          const div = document.createElement('label');
+          div.className = 'poll-option';
+          div.innerHTML = `
+            <input type="radio" name="pollOption" value="${opt.id}" />
+            <div class="label">
+              <div>${escapeHtml(opt.label)}</div>
+            </div>
+            <div class="small" style="min-width:72px; text-align:center;">${opt.votes} صوت</div>
+          `;
+          pollForm.appendChild(div);
+        });
+        renderResults();
+        // lock vote button if needed
+        voteBtn.disabled = !!poll.locked;
+      }
+
+      function renderResults(){
+        const total = poll.options.reduce((s,o)=>s+o.votes,0);
+        totalVotesEl.textContent = total;
+        resultsArea.innerHTML = '';
+        poll.options.forEach(opt=>{
+          const percent = total ? Math.round((opt.votes/total)*100) : 0;
+          const node = document.createElement('div');
+          node.innerHTML = `
+            <div style="display:flex;justify-content:space-between; align-items:center; gap:10px;">
+              <div class="small">${escapeHtml(opt.label)}</div>
+              <div class="small">${percent}% — ${opt.votes} صوت</div>
+            </div>
+            <div class="poll-bar"><i style="width:${percent}%;"></i></div>
+          `;
+          resultsArea.appendChild(node);
+        });
+      }
+
+      voteBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if(poll.locked){ alert('التصويت مقفل حالياً'); return; }
+        const selected = document.querySelector('input[name="pollOption"]:checked');
+        if(!selected){ alert('اختر خيارًا أولاً'); return; }
+        const id = selected.value;
+        const opt = poll.options.find(o=>o.id===id);
+        if(!opt) return;
+        opt.votes++;
+        savePoll(poll);
+        renderPoll();
+        // TODO: مزامنة مع السيرفر عبر fetch إذا أردت
+      });
+
+      // Comments
+      let comments = loadComments(); // {id, parentId|null, name, text, createdAt, likes}
+      const commentsList = byId('commentsList');
+      const commentsCount = byId('commentsCount');
+
+      function renderComments(){
+        commentsList.innerHTML = '';
+        const topLevel = comments.filter(c=>!c.parentId).sort((a,b)=>b.createdAt-a.createdAt);
+        commentsCount.textContent = comments.length;
+        topLevel.forEach(c => {
+          commentsList.appendChild(createCommentNode(c));
+        });
+      }
+
+      function createCommentNode(c){
+        const wrap = document.createElement('div');
+        wrap.className = 'poll-comment';
+        const avatar = document.createElement('div');
+        avatar.className = 'poll-avatar';
+        avatar.textContent = initials(c.name || 'مستخدم');
+
+        const body = document.createElement('div');
+        body.className = 'poll-comment-body';
+        const top = document.createElement('div');
+        top.className = 'poll-comment-top';
+
+        const left = document.createElement('div');
+        left.innerHTML = `<div class="poll-comment-author">${escapeHtml(c.name) || 'مستخدم مجهول'}</div><div class="small">${timeAgo(c.createdAt)}</div>`;
+
+        const right = document.createElement('div');
+        right.innerHTML = `<div class="small">${c.likes || 0} ❤</div>`;
+        top.appendChild(left);
+        top.appendChild(right);
+
+        const text = document.createElement('div');
+        text.className = 'poll-comment-text';
+        text.textContent = c.text;
+
+        const controls = document.createElement('div');
+        controls.className = 'poll-comment-controls';
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'link-btn';
+        likeBtn.textContent = 'إعجاب';
+        likeBtn.onclick = () => { c.likes = (c.likes||0)+1; saveAndRerender(); };
+
+        const replyBtn = document.createElement('button');
+        replyBtn.className = 'link-btn';
+        replyBtn.textContent = 'رد';
+        replyBtn.onclick = () => openReplyBox(c.id, wrap);
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'link-btn';
+        editBtn.textContent = 'تعديل';
+        editBtn.onclick = () => openEditBox(c, text);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'link-btn';
+        delBtn.style.color = '#ef4444';
+        delBtn.textContent = 'حذف';
+        delBtn.onclick = () => {
+          if(confirm('هل تود حذف هذا التعليق؟')) {
+            comments = comments.filter(x => x.id !== c.id && x.parentId !== c.id);
+            saveAndRerender();
+          }
+        };
+
+        controls.appendChild(likeBtn);
+        controls.appendChild(replyBtn);
+        controls.appendChild(editBtn);
+        controls.appendChild(delBtn);
+
+        body.appendChild(top);
+        body.appendChild(text);
+        body.appendChild(controls);
+
+        // replies (single level)
+        const replies = comments.filter(x=>x.parentId===c.id).sort((a,b)=>a.createdAt-b.createdAt);
+        if(replies.length){
+          const repliesWrap = document.createElement('div');
+          repliesWrap.className = 'poll-reply';
+          replies.forEach(r => {
+            const node = document.createElement('div');
+            node.className = 'poll-comment';
+            node.style.marginInlineStart = '0';
+            const av2 = document.createElement('div');
+            av2.className = 'poll-avatar';
+            av2.textContent = initials(r.name || 'مستخدم');
+            const bd2 = document.createElement('div');
+            bd2.className = 'poll-comment-body';
+            bd2.innerHTML = `<div style="display:flex;justify-content:space-between"><div><strong>${escapeHtml(r.name||'مستخدم')}</strong><div class="small">${timeAgo(r.createdAt)}</div></div><div class="small">${r.likes||0} ❤</div></div><div class="poll-comment-text" style="margin-top:6px">${escapeHtml(r.text)}</div>`;
+            const ctr2 = document.createElement('div');
+            ctr2.className = 'poll-comment-controls';
+            const like2 = document.createElement('button');
+            like2.className = 'link-btn'; like2.textContent='إعجاب'; like2.onclick=()=>{ r.likes=(r.likes||0)+1; saveAndRerender(); };
+            const del2 = document.createElement('button'); del2.className='link-btn'; del2.textContent='حذف'; del2.style.color='#ef4444'; del2.onclick=()=>{
+              if(confirm('حذف الرد؟')){ comments = comments.filter(x => x.id !== r.id); saveAndRerender(); }
+            };
+            ctr2.appendChild(like2); ctr2.appendChild(del2);
+            bd2.appendChild(ctr2);
+            node.appendChild(av2); node.appendChild(bd2);
+            repliesWrap.appendChild(node);
+          });
+          body.appendChild(repliesWrap);
+        }
+
+        wrap.appendChild(avatar);
+        wrap.appendChild(body);
+        return wrap;
+      }
+
+      function openReplyBox(parentId, afterNode){
+        if(afterNode.querySelector('.reply-box')) return;
+        const box = document.createElement('div');
+        box.className = 'reply-box';
+        box.style.marginTop = '8px';
+        box.innerHTML = `
+          <input class="inline-edit" placeholder="اسمك (اختياري)" />
+          <textarea class="inline-edit" placeholder="اكتب ردك..." style="min-height:70px"></textarea>
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <button class="poll-vote-btn">نشر الرد</button>
+            <button class="btn-secondary">إلغاء</button>
+          </div>
+        `;
+        const nameInput = box.querySelector('input');
+        const txt = box.querySelector('textarea');
+        const publish = box.querySelector('.poll-vote-btn');
+        const cancel = box.querySelector('.btn-secondary');
+        publish.onclick = ()=>{
+          const text = txt.value.trim();
+          if(!text){ alert('اكتب ردًا قبل النشر'); return; }
+          const comment = { id: uid(), parentId, name: nameInput.value.trim(), text, createdAt: Date.now(), likes: 0 };
+          comments.push(comment);
+          saveAndRerender();
+        };
+        cancel.onclick = ()=> box.remove();
+        afterNode.appendChild(box);
+        txt.focus();
+      }
+
+      function openEditBox(comment, textNode){
+        const edit = document.createElement('div');
+        edit.style.display = 'flex';
+        edit.style.flexDirection = 'column';
+        edit.style.gap = '8px';
+        const ta = document.createElement('textarea');
+        ta.className = 'inline-edit';
+        ta.value = comment.text;
+        const actions = document.createElement('div');
+        actions.style.display='flex'; actions.style.gap='8px';
+        const save = document.createElement('button');
+        save.className = 'poll-vote-btn'; save.textContent='حفظ';
+        const cancel = document.createElement('button'); cancel.className='btn-secondary'; cancel.textContent='إلغاء';
+        actions.appendChild(save); actions.appendChild(cancel);
+        edit.appendChild(ta); edit.appendChild(actions);
+        textNode.replaceWith(edit);
+        ta.focus();
+        save.onclick = ()=>{
+          const v = ta.value.trim();
+          if(!v){ alert('التعليق لا يمكن أن يكون فارغًا'); return; }
+          comment.text = v;
+          saveAndRerender();
+        };
+        cancel.onclick = ()=> saveAndRerender();
+      }
+
+      function saveAndRerender(){
+        saveComments(comments);
+        renderComments();
+        renderAdminComments();
+      }
+
+      // form actions
+      byId('addCommentBtn').addEventListener('click', (e)=>{
+        e.preventDefault();
+        const name = byId('username').value.trim();
+        const text = byId('commentText').value.trim();
+        if(!text){ alert('اكتب تعليقًا قبل النشر'); return; }
+        if(text.length > 500){ alert('الحد الأقصى 500 حرف'); return; }
+        const comment = { id: uid(), parentId: null, name, text, createdAt: Date.now(), likes: 0 };
+        comments.push(comment);
+        saveComments(comments);
+        byId('commentText').value = '';
+        byId('username').value = '';
+        renderComments();
+      });
+
+      byId('clearFormBtn').addEventListener('click', (e)=>{
+        e.preventDefault();
+        byId('commentText').value = '';
+        byId('username').value = '';
+      });
+
+      // initial render
+      renderPoll();
+      renderComments();
+
+      // ---------------- Admin logic ----------------
+      const adminOpenBtn = byId('adminOpenBtn');
+      const adminModal = byId('adminModal');
+      const adminLoginBtn = byId('adminLoginBtn');
+      const adminCancelBtn = byId('adminCancelBtn');
+      const adminPasswordInput = byId('adminPassword');
+      const adminPanel = byId('adminPanel');
+      const adminCloseBtn = byId('adminCloseBtn');
+
+      // admin UI elements
+      const adminPollQuestion = byId('adminPollQuestion');
+      const adminOptionsList = byId('adminOptionsList');
+      const adminAddOption = byId('adminAddOption');
+      const adminNewOption = byId('adminNewOption');
+      const adminSavePoll = byId('adminSavePoll');
+      const adminResetVotes = byId('adminResetVotes');
+      const adminLockVoting = byId('adminLockVoting');
+      const adminRefreshComments = byId('adminRefreshComments');
+      const adminDeleteAllComments = byId('adminDeleteAllComments');
+      const adminCommentsList = byId('adminCommentsList');
+      const adminExportBtn = byId('adminExportBtn');
+      const adminImportBtn = byId('adminImportBtn');
+      const adminImportArea = byId('adminImportArea');
+      const adminDoImport = byId('adminDoImport');
+      const adminClearImported = byId('adminClearImported');
+      const adminResetAll = byId('adminResetAll');
+
+      let adminSession = sessionStorage.getItem('itzomar_admin_auth') === '1';
+
+      function openAdminModal(){
+        adminPasswordInput.value = '';
+        // if no password set -> hint will say it's first time
+        const hasHash = !!localStorage.getItem(ADMIN_HASH_KEY);
+        byId('modalTitle').textContent = hasHash ? 'دخول لوحة الإدارة' : 'تعيين كلمة مرور للوحة الإدارة';
+        byId('modalHint').textContent = hasHash ? 'أدخل كلمة المرور الخاصة بالمالك' : 'لم يتم تعيين كلمة مرور بعد — أدخل كلمة جديدة لإنشائها';
+        adminModal.style.display = 'flex';
+        adminPasswordInput.focus();
+      }
+
+      adminOpenBtn.addEventListener('click', openAdminModal);
+      adminCancelBtn.addEventListener('click', ()=> adminModal.style.display = 'none');
+
+      adminLoginBtn.addEventListener('click', async ()=>{
+        const pw = adminPasswordInput.value.trim();
+        if(!pw){ alert('أدخل كلمة المرور'); return; }
+        const stored = localStorage.getItem(ADMIN_HASH_KEY);
+        if(!stored){
+          // set new password
+          const h = await sha256hex(pw);
+          localStorage.setItem(ADMIN_HASH_KEY, h);
+          sessionStorage.setItem('itzomar_admin_auth','1');
+          adminSession = true;
+          adminModal.style.display = 'none';
+          openAdminPanel();
+          alert('تم تعيين كلمة المرور وتسجيل الدخول.');
+          return;
+        }
+        const h = await sha256hex(pw);
+        if(h === stored){
+          sessionStorage.setItem('itzomar_admin_auth','1');
+          adminSession = true;
+          adminModal.style.display = 'none';
+          openAdminPanel();
+        } else {
+          alert('كلمة مرور خاطئة');
+        }
+      });
+
+      function openAdminPanel(){
+        if(!adminSession){ openAdminModal(); return; }
+        adminPanel.style.display = 'block';
+        adminPanel.setAttribute('aria-hidden','false');
+        // populate fields
+        adminPollQuestion.value = poll.question;
+        adminLockVoting.checked = !!poll.locked;
+        renderAdminOptions();
+        renderAdminComments();
+      }
+
+      adminCloseBtn.addEventListener('click', ()=> {
+        adminPanel.style.display = 'none';
+        adminPanel.setAttribute('aria-hidden','true');
+      });
+
+      // Admin: options editing
+      function renderAdminOptions(){
+        adminOptionsList.innerHTML = '';
+        poll.options.forEach(opt=>{
+          const row = document.createElement('div');
+          row.className = 'admin-row';
+          row.innerHTML = `
+            <input type="text" data-optid="${opt.id}" value="${escapeHtml(opt.label)}" />
+            <input type="number" data-votesid="${opt.id}" value="${opt.votes}" style="width:88px;" />
+            <button class="btn-secondary" data-delid="${opt.id}">حذف</button>
+          `;
+          adminOptionsList.appendChild(row);
+          // attach events
+          row.querySelector(`[data-delid="${opt.id}"]`).addEventListener('click', ()=>{
+            if(!confirm('حذف هذا الخيار؟')) return;
+            poll.options = poll.options.filter(o=>o.id!==opt.id);
+            savePoll(poll);
+            renderAdminOptions();
+            renderPoll();
+          });
+        });
+      }
+
+      adminAddOption.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const v = adminNewOption.value.trim();
+        if(!v){ alert('اكتب نص الخيار'); return; }
+        const newOpt = { id: uid(), label: v, votes: 0 };
+        poll.options.push(newOpt);
+        savePoll(poll);
+        adminNewOption.value = '';
+        renderAdminOptions();
+        renderPoll();
+      });
+
+      adminSavePoll.addEventListener('click', (e)=>{
+        e.preventDefault();
+        // read question
+        poll.question = adminPollQuestion.value.trim() || poll.question;
+        // read options labels and votes
+        const labels = adminOptionsList.querySelectorAll('input[type="text"]');
+        labels.forEach(inp=>{
+          const id = inp.getAttribute('data-optid');
+          const opt = poll.options.find(o=>o.id===id);
+          if(opt) opt.label = inp.value.trim() || opt.label;
+        });
+        const votesInputs = adminOptionsList.querySelectorAll('input[type="number"]');
+        votesInputs.forEach(inp=>{
+          const id = inp.getAttribute('data-votesid');
+          const opt = poll.options.find(o=>o.id===id);
+          if(opt) opt.votes = Math.max(0, parseInt(inp.value) || 0);
+        });
+        poll.locked = !!adminLockVoting.checked;
+        savePoll(poll);
+        renderPoll();
+        alert('تم حفظ تعديلات الاستطلاع');
+      });
+
+      adminResetVotes.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if(!confirm('هل تريد إعادة ضبط جميع الأصوات إلى صفر؟')) return;
+        poll.options.forEach(o=>o.votes = 0);
+        savePoll(poll);
+        renderPoll();
+      });
+
+      // Admin comments
+      function renderAdminComments(){
+        adminCommentsList.innerHTML = '';
+        if(!comments.length){
+          adminCommentsList.innerHTML = '<div class="muted">لا توجد تعليقات</div>';
+          return;
+        }
+        // show newest first
+        const sorted = comments.slice().sort((a,b)=>b.createdAt-a.createdAt);
+        sorted.forEach(c=>{
+          const node = document.createElement('div');
+          node.className = 'admin-comment';
+          node.innerHTML = `
+            <div style="display:flex; justify-content:space-between; gap:8px;">
+              <div style="flex:1">
+                <strong>${escapeHtml(c.name)||'مستخدم'}</strong> — <span class="muted">${timeAgo(c.createdAt)}</span>
+                <div style="margin-top:6px;">${escapeHtml(c.text)}</div>
+                <div class="muted" style="margin-top:6px;">Likes: ${c.likes||0} • id: ${c.id}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="btn-secondary" data-del="${c.id}">حذف</button>
+              </div>
+            </div>
+          `;
+          adminCommentsList.appendChild(node);
+          node.querySelector(`[data-del="${c.id}"]`).addEventListener('click', ()=>{
+            if(!confirm('حذف هذا التعليق؟')) return;
+            comments = comments.filter(x=>x.id !== c.id && x.parentId !== c.id);
+            saveAndRerender();
+            renderAdminComments();
+          });
+        });
+      }
+
+      adminRefreshComments.addEventListener('click', (e)=>{ e.preventDefault(); renderAdminComments(); });
+
+      adminDeleteAllComments.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if(!confirm('حذف كل التعليقات نهائياً؟')) return;
+        comments = [];
+        saveAndRerender();
+      });
+
+      // Export / Import
+      adminExportBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const payload = { poll, comments };
+        const data = JSON.stringify(payload, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'itzomar_poll_export.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+
+      adminImportBtn.addEventListener('click', (e)=>{
+        e.preventDefault();
+        // show import textarea
+        adminImportArea.style.display = 'block';
+        adminDoImport.style.display = 'inline-block';
+        adminClearImported.style.display = 'inline-block';
+      });
+
+      adminDoImport.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const txt = adminImportArea.value.trim();
+        if(!txt){ alert('ألصق JSON أولاً'); return; }
+        try{
+          const obj = JSON.parse(txt);
+          if(obj.poll && obj.comments){
+            poll = obj.poll;
+            comments = obj.comments;
+            savePoll(poll);
+            saveComments(comments);
+            renderPoll();
+            renderComments();
+            renderAdminOptions();
+            renderAdminComments();
+            alert('تم استيراد البيانات بنجاح');
+            adminImportArea.value = '';
+            adminImportArea.style.display = 'none';
+            adminDoImport.style.display = 'none';
+            adminClearImported.style.display = 'none';
+          } else {
+            alert('الـ JSON يجب أن يحتوي على خصائص poll و comments');
+          }
+        }catch(err){
+          alert('JSON غير صالح: ' + err.message);
+        }
+      });
+
+      adminClearImported.addEventListener('click', (e)=>{
+        e.preventDefault();
+        adminImportArea.value = '';
+        adminImportArea.style.display = 'none';
+        adminDoImport.style.display = 'none';
+        adminClearImported.style.display = 'none';
+      });
+
+      // Reset all (danger)
+      adminResetAll.addEventListener('click', (e)=>{
+        e.preventDefault();
+        if(!confirm('تأكيد: هل تريد إعادة ضبط كامل للـ poll و comments إلى القيم الافتراضية؟')) return;
+        localStorage.removeItem(POLL_STORAGE_KEY);
+        localStorage.removeItem(COMMENTS_STORAGE_KEY);
+        poll = loadPoll();
+        comments = [];
+        savePoll(poll);
+        saveComments(comments);
+        renderPoll();
+        renderComments();
+        renderAdminOptions();
+        renderAdminComments();
+        alert('تم إعادة الضبط');
+      });
+
+      // helper: admin view comments renderer for panel
+      function renderAdminComments(){ /* implemented earlier; placeholder to ensure function exists */ }
+      // the function above was defined previously; reassign it to actual implementation
+      // (Because of hoisting we already have a definition - ensure it points to the right function)
+      renderAdminComments = function(){
+        adminCommentsList.innerHTML = '';
+        if(!comments.length){
+          adminCommentsList.innerHTML = '<div class="muted">لا توجد تعليقات</div>';
+          return;
+        }
+        const sorted = comments.slice().sort((a,b)=>b.createdAt-a.createdAt);
+        sorted.forEach(c=>{
+          const node = document.createElement('div');
+          node.className = 'admin-comment';
+          node.innerHTML = `
+            <div style="display:flex; justify-content:space-between; gap:8px;">
+              <div style="flex:1">
+                <strong>${escapeHtml(c.name)||'مستخدم'}</strong> — <span class="muted">${timeAgo(c.createdAt)}</span>
+                <div style="margin-top:6px;">${escapeHtml(c.text)}</div>
+                <div class="muted" style="margin-top:6px;">Likes: ${c.likes||0} • id: ${c.id}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:6px;">
+                <button class="btn-secondary" data-del="${c.id}">حذف</button>
+              </div>
+            </div>
+          `;
+          adminCommentsList.appendChild(node);
+          node.querySelector(`[data-del="${c.id}"]`).addEventListener('click', ()=>{
+            if(!confirm('حذف هذا التعليق؟')) return;
+            comments = comments.filter(x=>x.id !== c.id && x.parentId !== c.id);
+            saveAndRerender();
+            renderAdminComments();
+          });
+        });
+      };
+
+      // display admin panel automatically if session valid
+      if(adminSession) openAdminPanel();
+
+      // debug helper — reset demo data (use from console)
+      window.__itzomarResetPoll = function(){
+        localStorage.removeItem(POLL_STORAGE_KEY);
+        localStorage.removeItem(COMMENTS_STORAGE_KEY);
+        poll = loadPoll();
+        comments = [];
+        savePoll(poll);
+        saveComments(comments);
+        renderPoll();
+        renderComments();
+        alert('تم إعادة البيانات التجريبية');
+      };
+    </script>
+  </body>
+</html>
